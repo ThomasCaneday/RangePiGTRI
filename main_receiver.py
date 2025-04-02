@@ -1,7 +1,7 @@
-# main_receiver.py
+#!/usr/bin/env python3
 import time
 import csv
-from csv_handler import write_csv_row
+import sys
 from rangepi_comm import open_rangepi_serial, configure_rangepi, read_rangepi_line
 
 CSV_STORAGE_FILE = 'received_audio_data.csv'
@@ -10,7 +10,7 @@ BAUDRATE = 9600
 
 def process_csv_row(row):
     """
-    Process the received CSV row. For example, if frequency is below a threshold, print an alert.
+    Process a CSV row. Here we simply print an alert if the frequency is below a threshold.
     """
     try:
         timestamp, frequency, amplitude = row
@@ -21,54 +21,60 @@ def process_csv_row(row):
 
 def is_valid_csv_line(line):
     """
-    Check if the line looks like a valid CSV row. We expect at least two commas.
+    Check if a line is a valid CSV row by counting commas.
+    We expect at least two commas (i.e. three fields).
     """
     return line.count(',') >= 2
 
 def main():
-    # Open serial port
+    print("Starting Receiver on Raspberry Pi Zero W...", flush=True)
     ser = open_rangepi_serial(SERIAL_PORT, BAUDRATE)
-    if ser is None:
-        print("Failed to open serial port.")
-        return
+    if not ser:
+        print("Failed to open serial port. Exiting.", flush=True)
+        sys.exit(1)
 
     # Configure dongle for RX mode
-    print("Configuring dongle to RX mode...")
+    print("Configuring dongle to RX mode...", flush=True)
     configure_rangepi(ser, mode="RX")
-    
-    # Optionally flush any leftover configuration data
     time.sleep(0.5)
+
+    # Flush any leftover data from configuration
     if ser.in_waiting:
         flushed = ser.read(ser.in_waiting)
-        print("Flushed data after config:", flushed)
+        print("Flushed leftover data:", flushed, flush=True)
     
-    print("Receiver: Listening for data...")
+    print("Receiver: Listening for data...", flush=True)
 
     try:
         while True:
-            # Debug: Print any raw data available in the input buffer
+            # Debug: Check for any raw data in the buffer
             if ser.in_waiting:
                 raw = ser.read(ser.in_waiting)
-                print("Raw data chunk:", raw)
-            
-            # Read a line with our helper function
+                print("Raw data chunk:", raw, flush=True)
+            # Read a full line (with a short timeout)
             line = read_rangepi_line(ser)
             if line:
-                print("Received line:", line)
+                print("Received line:", line, flush=True)
                 if is_valid_csv_line(line):
                     try:
                         row = next(csv.reader([line]))
-                        write_csv_row(CSV_STORAGE_FILE, row)
+                        # Append the row to the CSV file
+                        with open(CSV_STORAGE_FILE, 'a', newline='') as f:
+                            writer = csv.writer(f)
+                            writer.writerow(row)
                         process_csv_row(row)
                     except Exception as e:
-                        print("Error processing received CSV data:", e)
+                        print("Error processing CSV row:", e, flush=True)
                 else:
-                    print("Ignored non-CSV data:", line)
+                    print("Ignored non-CSV data:", line, flush=True)
             time.sleep(0.1)
     except KeyboardInterrupt:
-        print("Receiver stopping.")
+        print("Receiver stopping...", flush=True)
+    except Exception as e:
+        print("Exception in receiver loop:", e, flush=True)
     finally:
         ser.close()
+        print("Serial port closed.", flush=True)
 
 if __name__ == '__main__':
     main()
