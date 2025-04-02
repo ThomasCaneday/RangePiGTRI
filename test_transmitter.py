@@ -1,17 +1,23 @@
 # test_transmitter.py
-import serial
+from rangepi_comm import open_rangepi_serial, configure_rangepi, send_rangepi_data
 import time
 
 def main():
-    port = '/dev/ttyACM0'
-    baudrate = 9600
-    ser = serial.Serial(port, baudrate, timeout=1)
-    time.sleep(2)  # Allow dongle to initialize
+    ser = open_rangepi_serial()
+    if ser is None:
+        return
+
+    # Configure dongle for transmission (TX mode)
+    configure_rangepi(ser, mode="TX")
+    time.sleep(1)  # Wait for settings to take effect
 
     test_message = "Hello from Transmitter!\n"
     print("Transmitter: Sending:", test_message.strip())
-    ser.write(test_message.encode('utf-8'))
-    ser.flush()
+    latency, bytes_sent = send_rangepi_data(ser, test_message)
+    if latency is not None:
+        print(f"Sent {bytes_sent} bytes in {latency:.4f} seconds.")
+    else:
+        print("Failed to send data.")
 
     ser.close()
 
