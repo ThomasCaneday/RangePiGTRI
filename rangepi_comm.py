@@ -2,7 +2,7 @@
 import serial
 import time
 
-def open_rangepi_serial(port='/dev/ttyUSB0', baudrate=9600, timeout=1):
+def open_rangepi_serial(port='/dev/ttyACM0', baudrate=9600, timeout=1):
     """
     Open and return a serial connection to the RangePi dongle.
     """
