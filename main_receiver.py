@@ -2,15 +2,15 @@
 import time
 import csv
 from csv_handler import write_csv_row
-from rangepi_comm import open_rangepi_serial, read_rangepi_line
+from rangepi_comm import open_rangepi_serial, configure_rangepi, read_rangepi_line
 
 CSV_STORAGE_FILE = 'received_audio_data.csv'
-SERIAL_PORT = '/dev/ttyUSB0'
+SERIAL_PORT = '/dev/ttyACM0'
 BAUDRATE = 9600
 
 def process_csv_row(row):
     """
-    Process the received CSV row (example: alert if frequency < 50 Hz).
+    Process the received CSV row (e.g., alert if frequency is below threshold).
     """
     try:
         timestamp, frequency, amplitude = row
@@ -24,18 +24,26 @@ def main():
     if ser is None:
         return
 
-    print("Receiver running. Waiting for data...")
-    while True:
-        line = read_rangepi_line(ser)
-        if line:
-            print(f"Received: {line}")
-            try:
-                row = next(csv.reader([line]))
-                write_csv_row(CSV_STORAGE_FILE, row)
-                process_csv_row(row)
-            except Exception as e:
-                print("Error processing received data:", e)
-        time.sleep(0.1)
+    # Configure dongle for reception (RX mode)
+    configure_rangepi(ser, mode="RX")
+
+    print("Receiver: Listening for data...")
+    try:
+        while True:
+            line = read_rangepi_line(ser)
+            if line:
+                print("Received:", line)
+                try:
+                    row = next(csv.reader([line]))
+                    write_csv_row(CSV_STORAGE_FILE, row)
+                    process_csv_row(row)
+                except Exception as e:
+                    print("Error processing received data:", e)
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("Stopping receiver.")
+    finally:
+        ser.close()
 
 if __name__ == '__main__':
     main()
