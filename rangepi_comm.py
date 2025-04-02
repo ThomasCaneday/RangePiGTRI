@@ -43,7 +43,7 @@ def configure_rangepi(ser, mode="TX"):
     if freq_response:
         print(f"Frequency config response: {freq_response}")
     else:
-        print("No frequency response received. Assuming command accepted.")
+        print("No frequency response received on CM4. Assuming command accepted.")
 
     # Set device mode: TX or RX
     mode_cmd = f"AT+MODE={mode}\r\n"
@@ -53,7 +53,7 @@ def configure_rangepi(ser, mode="TX"):
     if mode_response:
         print(f"Mode config response: {mode_response}")
     else:
-        print("No mode response received. Assuming command accepted.")
+        print("No mode response received on CM4. Assuming command accepted.")
 
 def send_rangepi_data(ser, data):
     if ser is None:
