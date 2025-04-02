@@ -1,4 +1,4 @@
-# rangepi_comm.py (updated portions)
+# rangepi_comm.py
 import serial
 import time
 
@@ -21,8 +21,14 @@ def read_line_with_timeout(ser, timeout=0.3):
             if b'\n' in line:
                 break
         time.sleep(0.05)
-    # If no data was read, return an empty string rather than hanging
-    return line.decode('utf-8').strip() if line else ""
+    response = line.decode('utf-8').strip() if line else ""
+    # Filter out typical REPL prompt and syntax error lines
+    filtered_lines = []
+    for l in response.splitlines():
+        if l.strip() in (">>>", "") or l.strip().startswith("SyntaxError"):
+            continue
+        filtered_lines.append(l.strip())
+    return "\n".join(filtered_lines)
 
 def configure_rangepi(ser, mode="TX"):
     if ser is None:
@@ -49,12 +55,7 @@ def configure_rangepi(ser, mode="TX"):
     else:
         print("No mode response received. Assuming command accepted.")
 
-
 def send_rangepi_data(ser, data):
-    """
-    Send data over the RangePi dongle.
-    Returns latency (seconds) and number of bytes sent.
-    """
     if ser is None:
         print("Serial connection not available for sending.")
         return None, 0
@@ -71,7 +72,4 @@ def send_rangepi_data(ser, data):
         return None, 0
 
 def read_rangepi_line(ser):
-    """
-    Read a line from the RangePi dongle using our timeout function.
-    """
-    return read_line_with_timeout(ser, timeout=1.0)
+    return read_line_with_timeout(ser, timeout=0.3)
