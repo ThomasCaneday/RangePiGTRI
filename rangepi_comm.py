@@ -8,42 +8,40 @@ def open_rangepi_serial(port='/dev/ttyACM0', baudrate=9600, timeout=1):
     """
     try:
         ser = serial.Serial(port, baudrate=baudrate, timeout=timeout)
-        time.sleep(2)  # Allow dongle time to initialize
+        time.sleep(2)  # Wait for dongle initialization
         return ser
     except Exception as e:
         print("Error opening serial port:", e)
         return None
 
-def configure_rangepi(ser):
+def configure_rangepi(ser, mode="TX"):
     """
-    Configure the RangePi dongle using commands adapted from sbcshop's RangePi code.
-    Replace these example commands with the ones your dongle requires.
+    Configure the RangePi dongle using AT commands.
+    Use mode="TX" for transmitter or mode="RX" for receiver.
+    Adjust these commands as required by your dongle's documentation.
     """
     if ser is None:
-        print("Serial connection not available for configuration.")
+        print("Serial connection not available.")
         return
 
-    # Example configuration commands:
-    config_commands = [
-        "AT+FREQ=915000000",   # Set frequency to 915MHz
-        "AT+MODE=TX"           # Set transmitter mode (adjust if needed)
-        # Add more commands here if necessary (e.g., power, bandwidth, etc.)
-    ]
+    # Set frequency to 915MHz
+    freq_cmd = "AT+FREQ=915000000\r\n"
+    ser.write(freq_cmd.encode('utf-8'))
+    time.sleep(0.1)
+    response = ser.readline().decode('utf-8').strip()
+    print(f"Frequency config response: {response}")
 
-    for cmd in config_commands:
-        full_cmd = cmd + "\r\n"
-        try:
-            ser.write(full_cmd.encode('utf-8'))
-            time.sleep(0.1)  # Give time for the dongle to process the command
-            response = ser.readline().decode('utf-8').strip()
-            print(f"Config sent: {cmd} -> Received: {response}")
-        except Exception as e:
-            print(f"Error sending command '{cmd}':", e)
+    # Set device mode: TX or RX
+    mode_cmd = f"AT+MODE={mode}\r\n"
+    ser.write(mode_cmd.encode('utf-8'))
+    time.sleep(0.1)
+    response = ser.readline().decode('utf-8').strip()
+    print(f"Mode config response: {response}")
 
 def send_rangepi_data(ser, data):
     """
     Send data over the RangePi dongle.
-    Returns the latency (in seconds) and the number of bytes sent.
+    Returns latency (seconds) and number of bytes sent.
     """
     if ser is None:
         print("Serial connection not available for sending.")
