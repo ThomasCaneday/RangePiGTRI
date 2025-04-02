@@ -1,17 +1,20 @@
 # test_receiver.py
-import serial
+from rangepi_comm import open_rangepi_serial, configure_rangepi, read_rangepi_line
 import time
 
 def main():
-    port = '/dev/ttyACM0'
-    baudrate = 9600
-    ser = serial.Serial(port, baudrate, timeout=1)
-    time.sleep(2)  # Allow dongle to initialize
-    print("Receiver: Listening for data...")
+    ser = open_rangepi_serial()
+    if ser is None:
+        return
 
+    # Configure dongle for reception (RX mode)
+    configure_rangepi(ser, mode="RX")
+    time.sleep(1)  # Wait for settings to take effect
+
+    print("Receiver: Listening for data...")
     try:
         while True:
-            data = ser.readline().decode('utf-8').strip()
+            data = read_rangepi_line(ser)
             if data:
                 print("Received:", data)
             time.sleep(0.1)
