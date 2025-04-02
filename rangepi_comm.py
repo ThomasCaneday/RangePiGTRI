@@ -49,4 +49,29 @@ def configure_rangepi(ser, mode="TX"):
     else:
         print("No mode response received. Assuming command accepted.")
 
-# The rest of the functions remain unchanged...
+
+def send_rangepi_data(ser, data):
+    """
+    Send data over the RangePi dongle.
+    Returns latency (seconds) and number of bytes sent.
+    """
+    if ser is None:
+        print("Serial connection not available for sending.")
+        return None, 0
+
+    start_time = time.time()
+    try:
+        data_bytes = data.encode('utf-8')
+        ser.write(data_bytes)
+        ser.flush()
+        end_time = time.time()
+        return end_time - start_time, len(data_bytes)
+    except Exception as e:
+        print("Error sending data:", e)
+        return None, 0
+
+def read_rangepi_line(ser):
+    """
+    Read a line from the RangePi dongle using our timeout function.
+    """
+    return read_line_with_timeout(ser, timeout=1.0)
