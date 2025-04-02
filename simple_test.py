@@ -20,7 +20,6 @@ def main():
     else:
         print("Failed to send test message.")
       
-    # If you have a loopback or echo, attempt to read a response.
     time.sleep(1)
     response = read_rangepi_line(ser)
     if response:
