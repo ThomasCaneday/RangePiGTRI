@@ -2,23 +2,36 @@
 import serial
 import time
 
-def open_rangepi_serial(port='/dev/ttyACM0', baudrate=9600, timeout=1):
+def open_rangepi_serial(port='/dev/ttyACM0', baudrate=9600, timeout=0.5):
     """
     Open and return a serial connection to the RangePi dongle.
     """
     try:
         ser = serial.Serial(port, baudrate=baudrate, timeout=timeout)
-        time.sleep(2)  # Wait for dongle initialization
+        time.sleep(2)  # Allow dongle time to initialize
         return ser
     except Exception as e:
         print("Error opening serial port:", e)
         return None
 
+def read_line_with_timeout(ser, timeout=1.0):
+    """
+    Attempt to read from the serial port until a newline is encountered or timeout.
+    """
+    start_time = time.time()
+    line = b""
+    while time.time() - start_time < timeout:
+        if ser.in_waiting:
+            line += ser.read(ser.in_waiting)
+            if b'\n' in line:
+                break
+        time.sleep(0.05)
+    return line.decode('utf-8').strip() if line else None
+
 def configure_rangepi(ser, mode="TX"):
     """
     Configure the RangePi dongle using AT commands.
     Use mode="TX" for transmitter or mode="RX" for receiver.
-    Adjust these commands as required by your dongle's documentation.
     """
     if ser is None:
         print("Serial connection not available.")
@@ -28,15 +41,21 @@ def configure_rangepi(ser, mode="TX"):
     freq_cmd = "AT+FREQ=915000000\r\n"
     ser.write(freq_cmd.encode('utf-8'))
     time.sleep(0.1)
-    response = ser.readline().decode('utf-8').strip()
-    print(f"Frequency config response: {response}")
+    freq_response = read_line_with_timeout(ser, timeout=1.0)
+    if freq_response:
+        print(f"Frequency config response: {freq_response}")
+    else:
+        print("No frequency response received.")
 
     # Set device mode: TX or RX
     mode_cmd = f"AT+MODE={mode}\r\n"
     ser.write(mode_cmd.encode('utf-8'))
     time.sleep(0.1)
-    response = ser.readline().decode('utf-8').strip()
-    print(f"Mode config response: {response}")
+    mode_response = read_line_with_timeout(ser, timeout=1.0)
+    if mode_response:
+        print(f"Mode config response: {mode_response}")
+    else:
+        print("No mode response received.")
 
 def send_rangepi_data(ser, data):
     """
@@ -60,12 +79,6 @@ def send_rangepi_data(ser, data):
 
 def read_rangepi_line(ser):
     """
-    Read a line from the RangePi dongle.
+    Read a line from the RangePi dongle using our timeout function.
     """
-    if ser is None:
-        return None
-    try:
-        return ser.readline().decode('utf-8').strip()
-    except Exception as e:
-        print("Error reading data:", e)
-        return None
+    return read_line_with_timeout(ser, timeout=1.0)
