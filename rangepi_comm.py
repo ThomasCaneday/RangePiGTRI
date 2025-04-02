@@ -15,16 +15,17 @@ def open_rangepi_serial(port='/dev/ttyACM0', baudrate=9600, timeout=0.5):
         return None
 
 def read_line_with_timeout(ser, timeout=1.0):
-    """
-    Attempt to read from the serial port until a newline is encountered or timeout.
-    """
     start_time = time.time()
     line = b""
     while time.time() - start_time < timeout:
         if ser.in_waiting:
-            line += ser.read(ser.in_waiting)
+            data = ser.read(ser.in_waiting)
+            print("DEBUG: Read data chunk:", data)  # Debug output
+            line += data
             if b'\n' in line:
                 break
+        else:
+            print("DEBUG: No data waiting")
         time.sleep(0.05)
     return line.decode('utf-8').strip() if line else None
 
