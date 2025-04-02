@@ -1,35 +1,27 @@
+#!/usr/bin/env python3
 import time
 import board
 import busio
-from digitalio import DigitalInOut, Direction
+from digitalio import DigitalInOut
 import adafruit_rfm9x
 
-# --- Configure RangePi mode pins if required ---
-# Update these pins to the ones used on your board.
-mode0 = DigitalInOut(board.GP7)
-mode1 = DigitalInOut(board.GP8)
-mode0.direction = Direction.OUTPUT
-mode1.direction = Direction.OUTPUT
-# Example mode setting; adjust according to your RangePi documentation.
-mode0.value = True
-mode1.value = False
-# --- End mode configuration ---
+# Configure chip select (CS) and reset pins.
+CS = DigitalInOut(board.CE1)
+RESET = DigitalInOut(board.D25)
 
-# Set CS and RESET pins for the RFM9x module.
-CS = DigitalInOut(board.GP5)    # update if needed
-RESET = DigitalInOut(board.GP6) # update if needed
-
-# Initialize SPI bus.
+# Initialize SPI bus using the Raspberry Pi's SPI pins.
 spi = busio.SPI(board.SCK, MOSI=board.MOSI, MISO=board.MISO)
 
-# Initialize the RFM9x radio at 915 MHz.
+# Initialize the RFM9x module on 915 MHz.
 rfm9x = adafruit_rfm9x.RFM9x(spi, CS, RESET, 915.0)
 
 print("LoRa Receiver running...")
 while True:
     packet = rfm9x.receive()
     if packet is not None:
-        # Decode the received bytes into a UTF-8 string.
-        packet_text = str(packet, "utf-8")
+        try:
+            packet_text = packet.decode("utf-8")
+        except UnicodeDecodeError:
+            packet_text = str(packet)
         print("Received:", packet_text)
     time.sleep(0.1)
